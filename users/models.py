@@ -1,5 +1,5 @@
 from django.contrib.auth.base_user import BaseUserManager
-from django.contrib.auth.models import AbstractBaseUser
+from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.password_validation import validate_password
 from django.db import models
 
@@ -21,7 +21,7 @@ class UserManager(BaseUserManager):
         return user
 
 
-class User(AbstractBaseUser):
+class User(AbstractUser):
     username = models.CharField(max_length=128, unique=True)
     password = models.CharField(max_length=128, validators=[validate_password])
     type = models.CharField(max_length=64, choices=[('student', 'student'), ('teacher', 'teacher')])
