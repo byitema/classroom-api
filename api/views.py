@@ -1,12 +1,14 @@
+import json
+
 from django.http import Http404
 from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from users.models import User
-from .models import Course
+from .models import Course, Lecture
 from .permissions import IsTeacherOrReadOnly, IsOwnerOrReadOnly
-from .serializers import CourseSerializer
+from .serializers import CourseSerializer, LectureSerializer
 
 
 # Course CRUD
@@ -93,3 +95,52 @@ class CourseUsers(APIView):
 
         serializer = CourseSerializer(course)
         return Response(serializer.data)
+
+
+class LectureList(APIView):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsTeacherOrReadOnly, IsOwnerOrReadOnly]
+
+    def get(self, request, course_pk, format=None):
+        lectures = Lecture.objects.filter(teacher=request.user.id)
+        serializer = LectureSerializer(lectures, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, course_pk, format=None):
+        request.data['course'] = course_pk
+        request.data['teacher'] = request.user.pk
+        serializer = LectureSerializer(data=json.loads(request.data['data']))
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class LectureDetail(APIView):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsTeacherOrReadOnly, IsOwnerOrReadOnly]
+
+    def get_object(self, pk):
+        try:
+            return Lecture.objects.get(pk=pk)
+        except Lecture.DoesNotExist:
+            raise Http404
+
+    def get(self, request, course_pk, pk, format=None):
+        lecture = self.get_object(pk)
+        serializer = LectureSerializer(lecture)
+        return Response(serializer.data)
+
+    def put(self, request, course_pk, pk, format=None):
+        lecture = self.get_object(pk)
+        request.data['course'] = course_pk
+        request.data['teacher'] = request.user.pk
+        request.data['presentation'] = request.presentation
+        serializer = LectureSerializer(lecture, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, course_pk, pk, format=None):
+        lecture = self.get_object(pk)
+        lecture.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
