@@ -37,7 +37,7 @@ class Homework(models.Model):
         return self.name
 
 
-class Solution:
+class Solution(models.Model):
     text = models.TextField()
 
     students = models.ForeignKey(User, on_delete=models.CASCADE)
