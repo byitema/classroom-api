@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Course
+from .models import Course, Lecture
 
 
 # Course CRUD
@@ -22,3 +22,21 @@ class CourseSerializer(serializers.ModelSerializer):
         course.save()
 
         return course
+
+
+# Lecture CRUD
+class LectureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lecture
+        fields = '__all__'
+
+    def create(self, validated_data):
+        lecture = Lecture(
+            name=validated_data['name'],
+            presentation=validated_data['name'],
+            description=validated_data['name'],
+            teacher=validated_data['name'],
+            course=validated_data['name'],
+        )
+        lecture.save()
+        return lecture
