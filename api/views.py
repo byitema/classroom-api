@@ -7,16 +7,20 @@ from rest_framework.views import APIView
 
 from users.models import User
 from .models import Course, Lecture
-from .permissions import IsTeacherOrReadOnly, IsOwnerOrReadOnly
+from .permissions import IsTeacherOrReadOnly
 from .serializers import CourseSerializer, LectureSerializer
 
 
 # Course CRUD
 class CourseList(APIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsTeacherOrReadOnly, IsOwnerOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated, IsTeacherOrReadOnly]
 
     def get(self, request):
-        courses = Course.objects.filter(teacher=request.user.id)
+        if request.user.type == 'teacher':
+            courses = Course.objects.filter(teacher=request.user.id)
+        else:
+            courses = Course.objects.all()
+
         serializer = CourseSerializer(courses, many=True)
         return Response(serializer.data)
 
@@ -29,7 +33,7 @@ class CourseList(APIView):
 
 
 class CourseDetail(APIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsTeacherOrReadOnly, IsOwnerOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated, IsTeacherOrReadOnly]
 
     def get_object(self, pk):
         try:
@@ -37,13 +41,23 @@ class CourseDetail(APIView):
         except Course.DoesNotExist:
             raise Http404
 
+    def get_my_object(self, request, pk):
+        try:
+            return Course.objects.get(pk=pk, teacher=request.user)
+        except Course.DoesNotExist:
+            raise Http404
+
     def get(self, request, pk, format=None):
-        course = self.get_object(pk)
+        if request.user.type == 'teacher':
+            course = self.get_my_object(request, pk)
+        else:
+            course = self.get_object(pk)
         serializer = CourseSerializer(course)
         return Response(serializer.data)
 
+
     def put(self, request, pk, format=None):
-        course = self.get_object(pk)
+        course = self.get_my_object(request, pk)
         serializer = CourseSerializer(course, data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -51,14 +65,14 @@ class CourseDetail(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
-        course = self.get_object(pk)
+        course = self.get_my_object(request, pk)
         course.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # add student to the course
 class CourseUsers(APIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsTeacherOrReadOnly, IsOwnerOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated, IsTeacherOrReadOnly]
 
     def get_course(self, pk):
         try:
@@ -98,7 +112,7 @@ class CourseUsers(APIView):
 
 
 class LectureList(APIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsTeacherOrReadOnly, IsOwnerOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated, IsTeacherOrReadOnly]
 
     def get(self, request, course_pk, format=None):
         lectures = Lecture.objects.filter(teacher=request.user.id)
@@ -116,7 +130,7 @@ class LectureList(APIView):
 
 
 class LectureDetail(APIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsTeacherOrReadOnly, IsOwnerOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated, IsTeacherOrReadOnly]
 
     def get_object(self, pk):
         try:
