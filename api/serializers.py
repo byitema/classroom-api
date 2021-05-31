@@ -23,6 +23,11 @@ class CourseSerializer(serializers.ModelSerializer):
 
         return course
 
+    def update(self, instance, validated_data):
+        instance.name = validated_data['name']
+        instance.save()
+        return instance
+
 
 # Lecture CRUD
 class LectureSerializer(serializers.ModelSerializer):
@@ -31,12 +36,14 @@ class LectureSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def create(self, validated_data):
-        lecture = Lecture(
-            name=validated_data['name'],
-            presentation=validated_data['name'],
-            description=validated_data['name'],
-            teacher=validated_data['name'],
-            course=validated_data['name'],
-        )
+        lecture = Lecture(**validated_data)
         lecture.save()
         return lecture
+
+    def update(self, instance, validated_data):
+        instance.name = validated_data['name']
+        instance.presentation = validated_data['presentation']
+        instance.description = validated_data['description']
+        instance.save()
+        return instance
+

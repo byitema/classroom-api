@@ -40,7 +40,7 @@ class Homework(models.Model):
 class Solution(models.Model):
     text = models.TextField()
 
-    students = models.ForeignKey(User, on_delete=models.CASCADE)
+    student = models.ForeignKey(User, on_delete=models.CASCADE)
     homework = models.ForeignKey(Homework, on_delete=models.CASCADE)
 
     def __str__(self):
