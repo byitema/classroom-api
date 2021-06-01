@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Course, Lecture
+from .models import Course, Lecture, Homework, Solution
 
 
 # Course CRUD
@@ -47,3 +47,37 @@ class LectureSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+
+# Homework CRUD
+class HomeworkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Homework
+        fields = '__all__'
+
+    def create(self, validated_data):
+        homework = Homework(**validated_data)
+        homework.save()
+        return homework
+
+    def update(self, instance, validated_data):
+        instance.name = validated_data['name']
+        instance.description = validated_data['description']
+        instance.save()
+        return instance
+
+
+# Solution CRUD
+class SolutionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Solution
+        fields = '__all__'
+
+    def create(self, validated_data):
+        solution = Solution(**validated_data)
+        solution.save()
+        return solution
+
+    def update(self, instance, validated_data):
+        instance.text = validated_data['text']
+        instance.save()
+        return instance
