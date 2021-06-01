@@ -7,9 +7,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from users.models import User
-from .models import Course, Lecture, Homework
-from .permissions import IsTeacherOrReadOnly
-from .serializers import CourseSerializer, LectureSerializer, HomeworkSerializer
+from .models import Course, Lecture, Homework, Solution
+from .permissions import IsTeacherOrReadOnly, IsStudentOrReadOnly
+from .serializers import CourseSerializer, LectureSerializer, HomeworkSerializer, SolutionSerializer
 
 
 # Course CRUD
@@ -135,14 +135,14 @@ class LectureList(APIView):
         if request.user.type == 'teacher':
             lectures = Lecture.objects.filter(teacher=request.user.id, course=course_pk)
         else:
-            lectures = Lecture.objects.filter(course=course_pk)
+            lectures = Lecture.objects.filter(course_id=course_pk)
 
         serializer = LectureSerializer(lectures, many=True)
         return Response(serializer.data)
 
     def post(self, request, course_pk, format=None):
         course = self.get_my_course(request, course_pk)
-        if request.user not in course.teachers:
+        if request.user not in course.teachers.all():
             return Response({"message": "Course not found."})
 
         serializer = LectureSerializer(data={
@@ -216,7 +216,7 @@ class LectureDetail(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# Homework CRUD (for teacher)
+# Homework CRUD
 class HomeworkList(APIView):
     permission_classes = [permissions.IsAuthenticated, IsTeacherOrReadOnly, ]
 
@@ -228,16 +228,17 @@ class HomeworkList(APIView):
 
     def check_lecture(self, request, course_pk, lecture_pk):
         lecture = self.get_my_lecture(request, lecture_pk)
-        if lecture.course.pk != course_pk:
+        if lecture.course.pk != course_pk and request.user.type != 'student':
             return Response({"message": "Lecture not found."})
 
     def get(self, request, course_pk, lecture_pk, format=None):
-        self.check_lecture(request, course_pk, lecture_pk)
-
         if request.user.type == 'teacher':
-            homeworks = Homework.objects.filter(teacher=request.user.id, lecture=lecture_pk)
+            homeworks = Homework.objects.filter(teacher=request.user.id,
+                                                lecture_id=lecture_pk,
+                                                lecture__course_id=course_pk)
         else:
-            homeworks = Homework.objects.filter(lecture=lecture_pk)
+            homeworks = Homework.objects.filter(lecture_id=lecture_pk,
+                                                lecture__course_id=course_pk)
 
         serializer = HomeworkSerializer(homeworks, many=True)
         return Response(serializer.data)
@@ -260,3 +261,51 @@ class HomeworkList(APIView):
 
 class HomeworkDetail(APIView):
     permission_classes = [permissions.IsAuthenticated, IsTeacherOrReadOnly, ]
+    # TODO: HomeworkDetail
+
+
+# Solution CRUD ()
+class SolutionList(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsStudentOrReadOnly, ]
+
+    def get(self, request, course_pk, lecture_pk, homework_pk, format=None):
+        if request.user.type == 'teacher':
+            solutions = Solution.objects.filter(homework__teacher=request.user,
+                                                homework_id=homework_pk,
+                                                homework__lecture_id=lecture_pk,
+                                                homework__lecture__course_id=course_pk)
+        else:
+            solutions = Solution.objects.filter(student=request.user,
+                                                homework_id=homework_pk,
+                                                homework__lecture_id=lecture_pk,
+                                                homework__lecture__course_id=course_pk)
+
+        serializer = SolutionSerializer(solutions, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, course_pk, lecture_pk, homework_pk, format=None):
+        if not Homework.objects.filter(pk=homework_pk,
+                                       lecture_id=lecture_pk,
+                                       lecture__course_id=course_pk):
+            return Response({"message": "Homework not found."})
+
+        c = Course.objects.get(pk=course_pk)
+
+        if request.user not in c.students.all():
+            return Response({"message": "Student not from this course."})
+
+        serializer = SolutionSerializer(data={
+            'text': request.data['text'],
+            'student': request.user.pk,
+            'homework': homework_pk
+        })
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SolutionDetail(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsStudentOrReadOnly, ]
+    # TODO: SolutionDetail
