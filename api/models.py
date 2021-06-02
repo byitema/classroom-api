@@ -7,8 +7,8 @@ class Course(models.Model):
 
     teacher = models.ForeignKey(User, on_delete=models.CASCADE)
 
-    teachers = models.ManyToManyField(User, related_name='teachers')
-    students = models.ManyToManyField(User, related_name='students')
+    teachers = models.ManyToManyField(User, related_name='teachers_courses')
+    students = models.ManyToManyField(User, related_name='students_courses')
 
     def __str__(self):
         return self.name
