@@ -3,10 +3,10 @@ from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from users.models import User
-from api.models import Course
 from api.permissions import IsTeacherOrReadOnly
-from api.serializers import CourseSerializer
+from courses.models import Course
+from courses.serializers import CourseSerializer
+from users.models import User
 
 
 class CourseList(APIView):

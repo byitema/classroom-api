@@ -6,9 +6,10 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api.models import Course, Lecture
 from api.permissions import IsTeacherOrReadOnly
-from api.serializers import LectureSerializer
+from courses.models import Course
+from lectures.models import Lecture
+from lectures.serializers import LectureSerializer
 
 
 class LectureList(APIView):

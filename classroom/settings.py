@@ -43,6 +43,12 @@ INSTALLED_APPS = [
     'drf_yasg',
 
     'api',
+    'comments',
+    'courses',
+    'homeworks',
+    'lectures',
+    'marks',
+    'solutions',
     'users',
 ]
 
