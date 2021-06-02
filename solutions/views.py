@@ -1,10 +1,12 @@
-from rest_framework import status, permissions
+from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api.models import Course, Homework, Solution
 from api.permissions import IsStudentOrReadOnly
-from api.serializers import SolutionSerializer
+from courses.models import Course
+from homeworks.models import Homework
+from solutions.models import Solution
+from solutions.serializers import SolutionSerializer
 
 
 class SolutionList(APIView):

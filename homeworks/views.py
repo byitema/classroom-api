@@ -1,11 +1,12 @@
 from django.http import Http404
-from rest_framework import status, permissions
+from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api.models import Lecture, Homework
 from api.permissions import IsTeacherOrReadOnly
-from api.serializers import HomeworkSerializer
+from homeworks.models import Homework
+from homeworks.serializers import HomeworkSerializer
+from lectures.models import Lecture
 
 
 class HomeworkList(APIView):
