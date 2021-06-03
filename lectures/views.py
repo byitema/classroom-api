@@ -1,7 +1,7 @@
 import json
 
 from django.http import Http404
-from rest_framework import status, permissions
+from rest_framework import status, permissions, generics
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -12,27 +12,18 @@ from lectures.models import Lecture
 from lectures.serializers import LectureSerializer
 
 
-class LectureList(APIView):
+class LectureList(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsTeacherOrReadOnly, ]
-    parser_classes = [MultiPartParser, ]
+    serializer_class = LectureSerializer
 
-    def get_my_course(self, request, pk):
-        try:
-            return Course.objects.get(pk=pk, teacher=request.user)
-        except Course.DoesNotExist:
-            raise Http404
+    def get_queryset(self):
+        if self.request.user.type == 'teacher':
+            return Lecture.objects.filter(teacher=self.request.user.id, course=self.kwargs['course_pk'])
 
-    def get(self, request, course_pk, format=None):
-        if request.user.type == 'teacher':
-            lectures = Lecture.objects.filter(teacher=request.user.id, course=course_pk)
-        else:
-            lectures = Lecture.objects.filter(course_id=course_pk)
+        return Lecture.objects.all(course=self.kwargs['course_pk'])
 
-        serializer = LectureSerializer(lectures, many=True)
-        return Response(serializer.data)
-
-    def post(self, request, course_pk, format=None):
-        course = self.get_my_course(request, course_pk)
+    def post(self, request, *args, **kwargs):
+        course = Course.objects.get(pk=self.kwargs['course_pk'], teacher=request.user)
         if request.user not in course.teachers.all():
             return Response({"message": "Course not found."})
 
@@ -41,7 +32,7 @@ class LectureList(APIView):
             'presentation': request.data['file'],
             'description': json.loads(request.data['data'])['description'],
             'teacher': request.user.pk,
-            'course': course_pk
+            'course': self.kwargs['course_pk']
         })
 
         if serializer.is_valid():
