@@ -1,5 +1,5 @@
 from django.http import Http404
-from rest_framework import status, permissions
+from rest_framework import status, permissions, generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -9,24 +9,14 @@ from courses.serializers import CourseSerializer
 from users.models import User
 
 
-class CourseList(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsTeacherOrReadOnly]
+class CourseList(generics.ListCreateAPIView):
+    serializer_class = CourseSerializer
 
-    def get(self, request):
-        if request.user.type == 'teacher':
-            courses = Course.objects.filter(teacher=request.user.id)
-        else:
-            courses = Course.objects.all()
+    def get_queryset(self):
+        if self.request.user.type == 'teacher':
+            return Course.objects.filter(teacher=self.request.user.id)
 
-        serializer = CourseSerializer(courses, many=True)
-        return Response(serializer.data)
-
-    def post(self, request):
-        serializer = CourseSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Course.objects.all()
 
 
 class CourseDetail(APIView):
