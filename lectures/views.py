@@ -15,7 +15,7 @@ class LectureList(CreateUpdateMixin, generics.ListCreateAPIView):
         if self.request.user.type == 'teacher':
             return Lecture.objects.filter(teacher=self.request.user.id, course=self.kwargs['course_pk'])
 
-        return Lecture.objects.all(course=self.kwargs['course_pk'])
+        return Lecture.objects.filter(course=self.kwargs['course_pk'])
 
     def post(self, request, *args, **kwargs):
         return self.create_update(request, self.kwargs)

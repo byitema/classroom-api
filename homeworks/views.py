@@ -17,7 +17,7 @@ class HomeworkList(CreateUpdateMixin, generics.ListCreateAPIView):
                                            lecture=self.kwargs['lecture_pk'],
                                            lecture__course=self.kwargs['course_pk'])
 
-        return Homework.objects.all(lecture=self.kwargs['lecture_pk'],
+        return Homework.objects.filter(lecture=self.kwargs['lecture_pk'],
                                     lecture__course=self.kwargs['course_pk'])
 
     def post(self, request, *args, **kwargs):

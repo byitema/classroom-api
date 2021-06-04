@@ -4,27 +4,26 @@ from rest_framework.response import Response
 from homeworks.models import Homework
 from homeworks.serializers import HomeworkSerializer
 from lectures.models import Lecture
-from lectures.serializers import LectureSerializer
 
 
 class CreateUpdateMixin(object):
-    serializer_class = LectureSerializer
+    serializer_class = HomeworkSerializer
 
     def create_update(self, request, kwargs):
         homework = None
         if kwargs.get('pk'):
             try:
                 homework = Homework.objects.get(pk=kwargs['pk'],
-                                                teacher=self.request.user,
-                                                lecture=self.kwargs['lecture_pk'],
-                                                lecture__course=self.kwargs['course_pk'])
+                                                teacher=request.user,
+                                                lecture=kwargs['lecture_pk'],
+                                                lecture__course=kwargs['course_pk'])
             except Homework.DoesNotExist:
                 return Response({"message": "Homework not found"})
 
         try:
             lecture = Lecture.objects.get(pk=kwargs['lecture_pk'],
                                           teacher=request.user,
-                                          course=self.kwargs['course_pk'])
+                                          course=kwargs['course_pk'])
         except Lecture.DoesNotExist:
             return Response({"message": "Lecture not found."})
 

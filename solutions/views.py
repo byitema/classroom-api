@@ -1,55 +1,51 @@
-from rest_framework import permissions, status
+from rest_framework import permissions, generics
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from api.permissions import IsStudentOrReadOnly
-from courses.models import Course
-from homeworks.models import Homework
+from solutions.mixins import CreateUpdateMixin
 from solutions.models import Solution
 from solutions.serializers import SolutionSerializer
 
 
-class SolutionList(APIView):
+class SolutionList(CreateUpdateMixin, generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsStudentOrReadOnly, ]
+    serializer_class = SolutionSerializer
 
-    def get(self, request, course_pk, lecture_pk, homework_pk, format=None):
-        if request.user.type == 'teacher':
-            solutions = Solution.objects.filter(homework__teacher=request.user,
-                                                homework_id=homework_pk,
-                                                homework__lecture_id=lecture_pk,
-                                                homework__lecture__course_id=course_pk)
-        else:
-            solutions = Solution.objects.filter(student=request.user,
-                                                homework_id=homework_pk,
-                                                homework__lecture_id=lecture_pk,
-                                                homework__lecture__course_id=course_pk)
+    def get_queryset(self):
+        if self.request.user.type == 'teacher':
+            return Solution.objects.filter(homework=self.kwargs['homework_pk'],
+                                           homework__lecture=self.kwargs['lecture_pk'],
+                                           homework__lecture__course=self.kwargs['course_pk'])
 
-        serializer = SolutionSerializer(solutions, many=True)
-        return Response(serializer.data)
+        return Solution.objects.filter(student=self.request.user,
+                                       homework=self.kwargs['homework_pk'],
+                                       homework__lecture=self.kwargs['lecture_pk'],
+                                       homework__lecture__course=self.kwargs['course_pk'])
 
-    def post(self, request, course_pk, lecture_pk, homework_pk, format=None):
-        if not Homework.objects.filter(pk=homework_pk,
-                                       lecture_id=lecture_pk,
-                                       lecture__course_id=course_pk):
-            return Response({"message": "Homework not found."})
-
-        c = Course.objects.get(pk=course_pk)
-
-        if request.user not in c.students.all():
-            return Response({"message": "Student not from this course."})
-
-        serializer = SolutionSerializer(data={
-            'text': request.data['text'],
-            'student': request.user.pk,
-            'homework': homework_pk
-        })
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def post(self, request, *args, **kwargs):
+        return self.create_update(request, self.kwargs)
 
 
-class SolutionDetail(APIView):
+class SolutionDetail(CreateUpdateMixin, generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsStudentOrReadOnly, ]
-    # TODO: SolutionDetail
+    serializer_class = SolutionSerializer
+    queryset = Solution.objects.all()
+
+    def get_object(self):
+        try:
+            if self.request.user.type == 'teacher':
+                return Solution.objects.get(pk=self.kwargs['pk'],
+                                            homework=self.kwargs['homework_pk'],
+                                            homework__lecture=self.kwargs['lecture_pk'],
+                                            homework__lecture__course=self.kwargs['course_pk'])
+
+            return Solution.objects.get(pk=self.kwargs['pk'],
+                                        student=self.request.user,
+                                        homework=self.kwargs['homework_pk'],
+                                        homework__lecture=self.kwargs['lecture_pk'],
+                                        homework__lecture__course=self.kwargs['course_pk'])
+        except Solution.DoesNotExist:
+            return Response({"message": "Solution not found"})
+
+    def put(self, request, *args, **kwargs):
+        return self.create_update(request, self.kwargs)
