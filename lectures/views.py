@@ -1,5 +1,5 @@
-from django.http import Http404
 from rest_framework import permissions, generics
+from rest_framework.response import Response
 
 from api.permissions import IsTeacherOrReadOnly
 from lectures.mixins import CreateUpdateMixin
@@ -33,7 +33,7 @@ class LectureDetail(CreateUpdateMixin, generics.RetrieveUpdateDestroyAPIView):
 
             return Lecture.objects.get(pk=self.kwargs['pk'])
         except Lecture.DoesNotExist:
-            raise Http404
+            return Response({"message": "Lecture not found"})
 
     def put(self, request, *args, **kwargs):
         return self.create_update(request, self.kwargs)

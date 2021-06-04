@@ -15,7 +15,9 @@ class CreateUpdateMixin(object):
         lecture = None
         if kwargs.get('pk'):
             try:
-                lecture = Lecture.objects.get(pk=kwargs.get('pk'), teacher=request.user)
+                lecture = Lecture.objects.get(pk=kwargs['pk'],
+                                              teacher=request.user,
+                                              course=kwargs['course_pk'])
             except Lecture.DoesNotExist:
                 return Response({"message": "Lecture not found"})
 
