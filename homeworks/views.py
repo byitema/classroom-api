@@ -1,56 +1,47 @@
-from django.http import Http404
-from rest_framework import permissions, status
+from rest_framework import permissions, generics
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from api.permissions import IsTeacherOrReadOnly
+from homeworks.mixins import CreateUpdateMixin
 from homeworks.models import Homework
 from homeworks.serializers import HomeworkSerializer
-from lectures.models import Lecture
 
 
-class HomeworkList(APIView):
+class HomeworkList(CreateUpdateMixin, generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsTeacherOrReadOnly, ]
+    serializer_class = HomeworkSerializer
 
-    def get_my_lecture(self, request, pk):
+    def get_queryset(self):
+        if self.request.user.type == 'teacher':
+            return Homework.objects.filter(teacher=self.request.user.id,
+                                           lecture=self.kwargs['lecture_pk'],
+                                           lecture__course=self.kwargs['course_pk'])
+
+        return Homework.objects.filter(lecture=self.kwargs['lecture_pk'],
+                                    lecture__course=self.kwargs['course_pk'])
+
+    def post(self, request, *args, **kwargs):
+        return self.create_update(request, self.kwargs)
+
+
+class HomeworkDetail(CreateUpdateMixin, generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsTeacherOrReadOnly, ]
+    serializer_class = HomeworkSerializer
+    queryset = Homework.objects.all()
+
+    def get_object(self):
         try:
-            return Lecture.objects.get(pk=pk, teacher=request.user)
-        except Lecture.DoesNotExist:
-            raise Http404
+            if self.request.user.type == 'teacher':
+                return Homework.objects.get(pk=self.kwargs['pk'],
+                                            teacher=self.request.user,
+                                            lecture=self.kwargs['lecture_pk'],
+                                            lecture__course=self.kwargs['course_pk'])
 
-    def check_lecture(self, request, course_pk, lecture_pk):
-        lecture = self.get_my_lecture(request, lecture_pk)
-        if lecture.course.pk != course_pk and request.user.type != 'student':
-            return Response({"message": "Lecture not found."})
+            return Homework.objects.get(pk=self.kwargs['pk'],
+                                        lecture=self.kwargs['lecture_pk'],
+                                        lecture__course=self.kwargs['course_pk'])
+        except Homework.DoesNotExist:
+            return Response({"message": "Homework not found"})
 
-    def get(self, request, course_pk, lecture_pk, format=None):
-        if request.user.type == 'teacher':
-            homeworks = Homework.objects.filter(teacher=request.user.id,
-                                                lecture_id=lecture_pk,
-                                                lecture__course_id=course_pk)
-        else:
-            homeworks = Homework.objects.filter(lecture_id=lecture_pk,
-                                                lecture__course_id=course_pk)
-
-        serializer = HomeworkSerializer(homeworks, many=True)
-        return Response(serializer.data)
-
-    def post(self, request, course_pk, lecture_pk, format=None):
-        self.check_lecture(request, course_pk, lecture_pk)
-
-        serializer = HomeworkSerializer(data={
-            'name': request.data['name'],
-            'description': request.data['description'],
-            'teacher': request.user.pk,
-            'lecture': lecture_pk
-        })
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class HomeworkDetail(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsTeacherOrReadOnly, ]
-    # TODO: HomeworkDetail
+    def put(self, request, *args, **kwargs):
+        return self.create_update(request, self.kwargs)
