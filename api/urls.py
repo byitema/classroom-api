@@ -8,4 +8,5 @@ urlpatterns = [
     path('', include('homeworks.urls')),
     path('', include('solutions.urls')),
     path('', include('marks.urls')),
+    path('', include('comments.urls')),
 ]
